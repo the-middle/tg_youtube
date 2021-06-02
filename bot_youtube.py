@@ -1,9 +1,18 @@
-from token import BOT_TOKEN
+from tg_token import BOT_TOKEN
 import requests
+
+# def sendMessage(text):
+
 
 def getUpdates():
     tg_url = "https://api.telegram.org/bot"
     method = "/getUpdates?"
+    tg_request = requests.post(
+        url=tg_url + BOT_TOKEN + method
+    )
+    message = tg_request.json()
+    # print(tg_request.text)
+    print(message["result"][0]["message"]["text"])
 # def botRequest():
 #     tg_url = "https://api.telegram.org/bot"
 #     method = "/sendMessage?"
@@ -30,4 +39,4 @@ def getUpdates():
 #     print(tg_request.text)
 
 if __name__ == "__main__":
-
+    getUpdates()
