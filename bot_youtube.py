@@ -46,7 +46,8 @@ def getUpdates():
     tg_request_update = requests.post(
         url=tg_url + BOT_TOKEN + method,
         json={
-            "offset": offset
+            "offset": offset,
+            "allowed_updates": ["message"]
         }
     )
     message = tg_request_update.json()
