@@ -74,17 +74,22 @@ def youtube_search(options, i_chat_id):
         type='video'
     ).execute()
 
+    keyboard = [[InlineKeyboardButton("Hackerearth", callback_data='HElist8')]]
+
     videos = []
     yt_url = "https://www.youtube.com/watch?v="
+
+    i = 0
 
     for search_result in search_response.get('items', []):
         if search_result['id']['kind'] == 'youtube#video':
             videos.append('%s (%s)' % (search_result['snippet']['title'],
                                        search_result['id']['videoId']))
             sendMessage(search_result['snippet']['title'], i_chat_id,
-                        yt_url + search_result['id']['videoId'])
+                        yt_url + search_result['id']['videoId'], reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(text=i), callback_data=search_result['id']['videoId']]]))
             print(search_result['snippet']['title'], i_chat_id)
             ytAudioDownload(yt_url + search_result['id']['videoId'])
+            i = i+1
 
 def ytAudioDownload(url_yt):
     yt = YouTube(url_yt)
