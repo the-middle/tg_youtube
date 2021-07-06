@@ -15,29 +15,60 @@ DEVELOPER_KEY = google_api_key
 YOUTUBE_API_SERVICE_NAME = 'youtube'
 YOUTUBE_API_VERSION = 'v3'
 
+def InlineKeybouardButton (text: str, callback_data: str = None):
+    button = {
+        "text": text,
+        "callback_data": callback_data,
+    }
+    buttons = [[button]]
+    return buttons
 
-def sendMessage(i_text, i_chat_id, link_yt=""):
+def sendMessage(i_text, i_chat_id, link_yt="", reply_markup = None):
     method = "/sendMessage?"
     print(i_chat_id)
-    if i_text == "/start":
-        tg_send_message = requests.post(
-            url=tg_url + BOT_TOKEN + method,
-            json={
-                "chat_id": i_chat_id,
-                "text": i_text
-            }
-        )
+    if reply_markup == None:
+        if i_text == "/start":
+            tg_send_message = requests.post(
+                url=tg_url + BOT_TOKEN + method,
+                json={
+                    "chat_id": i_chat_id,
+                    "text": i_text
+                }
+            )
+        else:
+            tg_send_message = requests.post(
+                url=tg_url + BOT_TOKEN + method,
+                json={
+                    "chat_id": i_chat_id,
+                    "parse_mode": "HTML",
+                    "text": i_text + F"<a href=\"{link_yt}\">\nСсылка</a>"
+                }
+            )
+            print(i_chat_id)
+            print(tg_send_message.json())
     else:
-        tg_send_message = requests.post(
-            url=tg_url + BOT_TOKEN + method,
-            json={
-                "chat_id": i_chat_id,
-                "parse_mode": "HTML",
-                "text": i_text + F"<a href=\"{link_yt}\">\nСсылка</a>"
-            }
-        )
-        print(i_chat_id)
-        print(tg_send_message.json())
+        try:
+            tg_send_message = requests.post(
+                url=tg_url + BOT_TOKEN + method,
+                json={
+                    "chat_id": i_chat_id,
+                    "parse_mode": "HTML",
+                    "text": i_text + F"<a href=\"{link_yt}\">\nСсылка</a>",
+                    "reply_markup": reply_markup
+                }
+            )
+            print(i_chat_id)
+            print(tg_send_message.json())
+        except:
+            tg_send_message = requests.post(
+                url=tg_url + BOT_TOKEN + method,
+                json={
+                    "chat_id": i_chat_id,
+                    "text": "Что-то пошло не так, попробуйте еще раз."
+                }
+            )
+            print(i_chat_id)
+            print(tg_send_message.json())
 
 
 def getUpdates():
@@ -47,21 +78,23 @@ def getUpdates():
         url=tg_url + BOT_TOKEN + method,
         json={
             "offset": offset,
-            "allowed_updates": ["message"]
+            "allowed_updates": ["message", "callback_query"]
         }
     )
     message = tg_request_update.json()
     offset = int(message["result"][0]["update_id"]) + 1
     print(offset)
     print(tg_request_update.json())
-    try:
-        youtube_search(message["result"][0]["message"]["text"],
-                       message["result"][0]["message"]["chat"]["id"])
-    except:
-        pass
+    if message["result"][0]["callback_query"] == None:
+        try:
+            youtubeSearch(message["result"][0]["message"]["text"],
+                        message["result"][0]["message"]["chat"]["id"])
+        except:
+            pass
+    else:
+        ytAudioDownload
 
-
-def youtube_search(options, i_chat_id):
+def youtubeSearch(options, i_chat_id):
     youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
                     developerKey=DEVELOPER_KEY)
 
@@ -86,7 +119,7 @@ def youtube_search(options, i_chat_id):
             videos.append('%s (%s)' % (search_result['snippet']['title'],
                                        search_result['id']['videoId']))
             sendMessage(search_result['snippet']['title'], i_chat_id,
-                        yt_url + search_result['id']['videoId'], reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(text=i), callback_data=search_result['id']['videoId']]]))
+                        yt_url + search_result['id']['videoId'], InlineKeyboardMarkup([[InlineKeyboardButton(text=i), callback_data=search_result['id']['videoId']]]))
             print(search_result['snippet']['title'], i_chat_id)
             ytAudioDownload(yt_url + search_result['id']['videoId'])
             i = i+1
