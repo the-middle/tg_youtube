@@ -1,5 +1,9 @@
 # import argparse
+from os import system
 import time
+import sys
+import json
+from typing import List
 
 import requests
 from googleapiclient.discovery import build
@@ -10,23 +14,30 @@ from tg_token import BOT_TOKEN
 import re
 
 tg_url = "https://api.telegram.org/bot"
+yt_url = "https://www.youtube.com/watch?v="
 offset = 0
 DEVELOPER_KEY = google_api_key
 YOUTUBE_API_SERVICE_NAME = 'youtube'
 YOUTUBE_API_VERSION = 'v3'
 
-def InlineKeybouardButton (text: str, callback_data: str = None):
-    button = {
-        "text": text,
-        "callback_data": callback_data,
-    }
-    buttons = [[button]]
-    return buttons
+# TODO: make upload function
+class InlineKeyboardButton:
+    def __init__(self, i_text: str, callback_data: str = None):
+        self.text = i_text
+        self.callback_data = callback_data
+        print("inline keyboard button triggered")
 
-def sendMessage(i_text, i_chat_id, link_yt="", reply_markup = None):
+class InlineKeyboardMarkup:
+    def __init__(self, i_text: str, callback_data: str = None):
+        self.inline_keyboard = [[InlineKeyboardButton(i_text, callback_data)]]
+        print("inline keyboard markup triggered")
+    def to_json(self):
+        return json.dumps(self, default=lambda o: o.__dict__)
+
+def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
     method = "/sendMessage?"
     print(i_chat_id)
-    if reply_markup == None:
+    if not reply_markup:
         if i_text == "/start":
             tg_send_message = requests.post(
                 url=tg_url + BOT_TOKEN + method,
@@ -53,8 +64,9 @@ def sendMessage(i_text, i_chat_id, link_yt="", reply_markup = None):
                 json={
                     "chat_id": i_chat_id,
                     "parse_mode": "HTML",
-                    "text": i_text + F"<a href=\"{link_yt}\">\nСсылка</a>",
-                    "reply_markup": reply_markup
+                    "text": i_text,
+                    "reply_markup": json.dumps(reply_markup, default=lambda o: o.__dict__)
+                    # "reply_markup": {"inline_keyboard": [[{"text": "Button1", "callback_data": "first_1"},{"text": "Button2", "callback_data": "second_2"}]]}
                 }
             )
             print(i_chat_id)
@@ -82,17 +94,26 @@ def getUpdates():
         }
     )
     message = tg_request_update.json()
-    offset = int(message["result"][0]["update_id"]) + 1
+    try:
+        offset = int(message["result"][0]["update_id"]) + 1
+    except IndexError:
+        offset = 1
     print(offset)
-    print(tg_request_update.json())
-    if message["result"][0]["callback_query"] == None:
-        try:
-            youtubeSearch(message["result"][0]["message"]["text"],
-                        message["result"][0]["message"]["chat"]["id"])
-        except:
-            pass
-    else:
-        ytAudioDownload
+    print(message)
+    try:
+        print("____________")
+        # if not message["result"][0]["callback_query"]:
+        if not message.get("reply_markup"):
+            try:
+                print("No reply markup, passing to search")
+                youtubeSearch(message["result"][0]["message"]["text"],
+                            message["result"][0]["message"]["chat"]["id"])
+            except:
+                pass
+        else:
+            ytAudioDownload(url_yt=yt_url+message["reply_markup"]["inline_keyboard"][0][0]["callback_data"])
+    except:
+        pass
 
 def youtubeSearch(options, i_chat_id):
     youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
@@ -107,22 +128,25 @@ def youtubeSearch(options, i_chat_id):
         type='video'
     ).execute()
 
-    keyboard = [[InlineKeyboardButton("Hackerearth", callback_data='HElist8')]]
-
-    videos = []
-    yt_url = "https://www.youtube.com/watch?v="
-
-    i = 0
-
+    video_titles = []
+    video_ids = []
+    linked_text = []
+    # TODO: refactor loops, create separate functions(?)
+    i = 1
+    j = 0
+    print("searching...\n___________")
     for search_result in search_response.get('items', []):
         if search_result['id']['kind'] == 'youtube#video':
-            videos.append('%s (%s)' % (search_result['snippet']['title'],
-                                       search_result['id']['videoId']))
-            sendMessage(search_result['snippet']['title'], i_chat_id,
-                        yt_url + search_result['id']['videoId'], InlineKeyboardMarkup([[InlineKeyboardButton(text=i), callback_data=search_result['id']['videoId']]]))
+            video_titles.append('%n.%s' % (i, search_result['snippet']['title']))
+            video_ids.append('%s' % (search_result['id']['videoId']))
             print(search_result['snippet']['title'], i_chat_id)
-            ytAudioDownload(yt_url + search_result['id']['videoId'])
+            keyboard_markup = InlineKeyboardMarkup(i_text=i, callback_data=search_result['id']['videoId'])
             i = i+1
+    # TODO: add 5 buttons in a row with 1-5 numbers
+    for titels in video_titles:
+        linked_text.append(F'{titels} <a href=\"{yt_url+video_ids[j]}\">\nСсылка</a>')
+        j = j + 1
+    sendMessage(i_text='\n'.join(map(str, linked_text)), i_chat_id=i_chat_id, reply_markup=keyboard_markup)
 
 def ytAudioDownload(url_yt):
     yt = YouTube(url_yt)
@@ -133,5 +157,12 @@ def ytAudioDownload(url_yt):
 
 if __name__ == "__main__":
     while True:
-        getUpdates()
-        time.sleep(5)
+    #     getUpdates()
+    #     time.sleep(1)
+        print("Next? y to continue:")
+        if input() != "y":
+            print("Exited")
+            sys.exit()
+        else:
+            print("Next update")
+            getUpdates()
