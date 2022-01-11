@@ -65,7 +65,7 @@ def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
                     "chat_id": i_chat_id,
                     "parse_mode": "HTML",
                     "text": i_text,
-                    "reply_markup": json.dumps(reply_markup, default=lambda o: o.__dict__)
+                    "reply_markup": {"inline_keyboard": [reply_markup]}
                     # "reply_markup": {"inline_keyboard": [[{"text": "Button1", "callback_data": "first_1"},{"text": "Button2", "callback_data": "second_2"}]]}
                 }
             )
@@ -131,21 +131,23 @@ def youtubeSearch(options, i_chat_id):
     video_titles = []
     video_ids = []
     linked_text = []
+    keyboard_markup = []
     # TODO: refactor loops, create separate functions(?)
     i = 1
     j = 0
     print("searching...\n___________")
     for search_result in search_response.get('items', []):
         if search_result['id']['kind'] == 'youtube#video':
-            video_titles.append('%n.%s' % (i, search_result['snippet']['title']))
+            video_titles.append('%s.%s' % (i, search_result['snippet']['title']))
             video_ids.append('%s' % (search_result['id']['videoId']))
             print(search_result['snippet']['title'], i_chat_id)
-            keyboard_markup = InlineKeyboardMarkup(i_text=i, callback_data=search_result['id']['videoId'])
-            i = i+1
+            keyboard_markup.append(InlineKeyboardButton(i_text=i, callback_data=search_result['id']['videoId']).__dict__)
+            i = i + 1
     # TODO: add 5 buttons in a row with 1-5 numbers
     for titels in video_titles:
         linked_text.append(F'{titels} <a href=\"{yt_url+video_ids[j]}\">\nСсылка</a>')
         j = j + 1
+    
     sendMessage(i_text='\n'.join(map(str, linked_text)), i_chat_id=i_chat_id, reply_markup=keyboard_markup)
 
 def ytAudioDownload(url_yt):
