@@ -52,7 +52,7 @@ def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
                     "chat_id": i_chat_id,
                     "parse_mode": "Markdown",
                     "text": "*Как работает бот:*\nБот получает от тебя название песни, ищет её на YouTube и предлагает на выбор первые 5 песен из результатов поиска. После клика по кнопке с нужным номером необходимо подождать несколько секунд и получить свою песню."
-                }
+                } # TODO: check user language and send message in his language
             )
         else:
             tg_send_message = requests.post(
@@ -90,7 +90,7 @@ def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
             print(i_chat_id)
             print(tg_send_message.json())
 
-
+# TODO: Get title of audio that someone could send to bot
 def getUpdates():
     global offset
     method = "/getUpdates?"
@@ -170,6 +170,7 @@ def youtubeSearch(options: str, i_chat_id: str):
     
     sendMessage(i_text='\n'.join(map(str, linked_text)), i_chat_id=i_chat_id, reply_markup=keyboard_markup)
 
+# TODO: pass error about explicit content(because we are not logged in)
 def ytAudio(url_yt: str):
     audio = BytesIO()
     yt = YouTube(url_yt)
@@ -222,3 +223,7 @@ if __name__ == "__main__":
         # else:
         #     print("Next update")
         #     getUpdates()
+
+# TODO: make bot async
+# TODO: convert audio without ffmpeg(need to port libmp3lame to Python3)
+# TODO: port bot to Go
