@@ -91,6 +91,7 @@ def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
             print(tg_send_message.json())
 
 # TODO: Get title of audio that someone could send to bot
+# TODO: Check if it is an audiomessage and send instruction to the fucker
 def getUpdates():
     global offset
     method = "/getUpdates?"
