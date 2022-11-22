@@ -1,18 +1,12 @@
 # import argparse
-import io
 import subprocess
-from concurrent.futures import process
 import json
-import os
-import sys
 import time
 from io import BytesIO
-from turtle import st
-from typing import List, Text
+from typing import List
 
 import requests
 from googleapiclient.discovery import build
-from pydub import AudioSegment
 from pytube import YouTube
 
 from g_api import google_api_key
@@ -24,6 +18,7 @@ offset = 0
 DEVELOPER_KEY = google_api_key
 YOUTUBE_API_SERVICE_NAME = 'youtube'
 YOUTUBE_API_VERSION = 'v3'
+action = [ "typing", "upload_photo", "record_video", "upload_video", "record_voice", "upload_voice", "upload_document", "choose_sticker", "find_location", "record_video_note", "upload_video_note"]
 
 # TODO: make upload function
 class InlineKeyboardButton:
@@ -32,13 +27,6 @@ class InlineKeyboardButton:
         self.callback_data = callback_data
         print("inline keyboard button triggered")
 
-class InlineKeyboardMarkup:
-    def __init__(self, i_text: str, callback_data: str = None):
-        self.inline_keyboard = [[InlineKeyboardButton(i_text, callback_data)]]
-        print("inline keyboard markup triggered")
-    def to_json(self):
-        return json.dumps(self, default=lambda o: o.__dict__)
-
 def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
     method = "/sendMessage?"
     print(F"Chat id inside sendMessage: {i_chat_id}")
@@ -46,6 +34,7 @@ def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
     if not reply_markup:
         if i_text == "/start":
             print("Inside")
+            sendChatAction(i_chat_id, action[0])
             tg_send_message = requests.post(
                 url=tg_url + BOT_TOKEN + method,
                 json={
@@ -55,6 +44,7 @@ def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
                 } # TODO: check user language and send message in his language
             )
         else:
+            sendChatAction(i_chat_id, action[0])
             tg_send_message = requests.post(
                 url=tg_url + BOT_TOKEN + method,
                 json={
@@ -67,6 +57,7 @@ def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
             print(tg_send_message.json())
     else:
         try:
+            sendChatAction(i_chat_id, action[0])
             tg_send_message = requests.post(
                 url=tg_url + BOT_TOKEN + method,
                 json={
@@ -80,6 +71,7 @@ def sendMessage(i_text, i_chat_id, link_yt="", reply_markup: List = None):
             print(i_chat_id)
             print(tg_send_message.json())
         except:
+            sendChatAction(i_chat_id, action[0])
             tg_send_message = requests.post(
                 url=tg_url + BOT_TOKEN + method,
                 json={
@@ -120,10 +112,12 @@ def getUpdates():
                 print("Inside if")
                 if message.get("result")[0].get("message").get("text") == "/start":
                     print("Sending message")
+                    sendChatAction(i_chat_id=message.get("result")[0].get("message").get("chat").get("id"), action=action[0])
                     sendMessage(i_text=message.get("result")[0].get("message").get("text"), i_chat_id=message.get("result")[0].get("message").get("chat").get("id"))
                 else:
                     try:
                         print("No reply markup, passing to search")
+                        sendChatAction(i_chat_id=message.get("result")[0].get("message").get("chat").get("id"), action=action[0])
                         youtubeSearch(message["result"][0]["message"]["text"],
                                     message["result"][0]["message"]["chat"]["id"])
                     except:
@@ -131,7 +125,9 @@ def getUpdates():
             else:
                 print("-------------------")
                 print(message.get("result")[0].get("callback_query").get("data"))
+                sendChatAction(i_chat_id=message.get("result")[0].get("callback_query").get("from").get("id"), action=action[6])
                 audio_stream = ytAudio(url_yt=yt_url+message.get("result")[0].get("callback_query").get("data"))
+                sendChatAction(i_chat_id=message.get("result")[0].get("callback_query").get("from").get("id"), action=action[6])
                 # audio_stream = ytAudio(url_yt=yt_url+message["reply_markup"]["inline_keyboard"][0][0]["callback_data"])
                 sendAudio(i_chat_id=message.get("result")[0].get("callback_query").get("from").get("id"), audio=audio_stream[0], duration=audio_stream[1], title=audio_stream[2])
         except:
@@ -176,6 +172,7 @@ def ytAudio(url_yt: str):
     audio = BytesIO()
     yt = YouTube(url_yt)
     print(yt.streams.all())
+    print("Check----------------------")
     yt_stream = yt.streams.filter(type="audio", subtype="webm", audio_codec="opus").order_by("abr").last()
     print(yt_stream)
     yt_stream.stream_to_buffer(audio)
@@ -212,6 +209,18 @@ def sendAudio(i_chat_id: str, audio: bytes, duration: str, title: str):
     print(F'Duration: {duration}')
     print(F'Chat id: {i_chat_id}')
     print(tg_send_message.json())
+
+def sendChatAction(i_chat_id: str, action: str):
+    method = "/sendChatAction?"
+    print("i_chat_id: {i_chat_id}, action: {action}")
+    tg_send_action = requests.post(
+                url=tg_url + BOT_TOKEN + method,
+                json={
+                    "chat_id": i_chat_id,
+                    "action": action
+                }
+            )
+    print(tg_send_action.json())
 
 if __name__ == "__main__":
     while True:
